@@ -11,6 +11,7 @@ By: @gabrielsgaspar
 import requests, json, os, time
 import pandas as pd
 from flatten_json import flatten
+from tqdm.auto import tqdm
 
 # Define function to verify data directory exists
 def verify_directory():
@@ -21,12 +22,12 @@ def verify_directory():
     Argument:
         None
     Output:
-        /data: a repository
+        ../data: a repository
 
     """
     # Verify if directory exists and create directory if not
-    if not os.path.exists("data"):
-        os.makedirs("data")
+    if not os.path.exists("../data/covid"):
+        os.makedirs("../data/covid")
 
 # Define function to paginate through the API
 def api_call(page, username, password):
@@ -89,27 +90,27 @@ def main():
     # Set user name and password for leito ocupacao API
     username = "user-api-leitos"
     password = "aQbLL3ZStaTr38tj"
-    # Set initial page value and empty list to append dataframes for pages
-    page = 1
+    # Set empty list to append dataframes for pages
     df_holder = []
     # Loop through pages in API until reach end
     print("Gathering data from API ...")
-    while True:
+    for page in tqdm(range(1, api_call(1, username, password)["hits"]["total"]["value"])):
         json_ = api_call(page, username, password)
-        # If error in json then break from loop because reached end
-        if "error" in json_.keys():
-            break
-        # Put json dictionary as dataframe and append to list
-        temporary_df = json_df(json_)
-        df_holder.append(temporary_df)
-        # Increase page numer
-        page += 1
+        # Create temporary empty list to store values for this page
+        page_list = []
+        # Put each id information in dataframe
+        for id_ in json_["hits"]["hits"]:
+            # Put json dictionary as dataframe and append to list
+            temporary_df = json_df(id_)
+            page_list.append(temporary_df)
+        # Append dataframe for page in df_holder
+        df_holder.append(pd.concat(page_list))
     # Concatenate all pages into one dataframe
     print("Concatenating data ...")
     covid_df = pd.concat(df_holder)
     # Save dataframe in the data folder
     print("Saving data ...")
-    covid_df.to_csv("data/covid_data.csv", index = False, encoding = "utf-8")
+    covid_df.to_csv("../data/covid/covid_data.csv", index = False, encoding = "utf-8")
     # Print complete message
     print("Download of Covid data from DataSUS complete!")
 
